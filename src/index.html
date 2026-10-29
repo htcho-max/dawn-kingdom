@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#161c29">
+<!-- artifact:head -->
+<title>새벽의 왕국</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=Noto+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="style.css">
+<!-- /artifact:head -->
+</head>
+<body>
+<!-- artifact:body -->
+<div id="app">
+  <canvas id="view"></canvas>
+  <header id="top">
+    <div class="res" id="r-food"><i style="background:var(--food)"></i><small>식량</small><b>0</b></div>
+    <div class="res" id="r-wood"><i style="background:var(--wood)"></i><small>목재</small><b>0</b></div>
+    <div class="res" id="r-gold"><i style="background:var(--gold)"></i><small>금</small><b>0</b></div>
+    <span class="agechip" id="age">암흑 시대</span>
+    <div class="res" id="r-pop"><i style="background:var(--pop)"></i><small>인구</small><b>0/0</b></div>
+    <span class="sp"></span>
+    <button class="tb" id="b-idle" title="쉬고 있는 일꾼 선택 (.)">쉬는 일꾼 <span id="idle-n">0</span></button>
+    <button class="tb" id="b-army" title="모든 군대 선택">군대 선택</button>
+    <button class="tb" id="b-zout" title="축소 (-)" aria-label="축소">−</button><button class="tb" id="b-zin" title="확대 (+)" aria-label="확대">+</button>
+    <span id="clock">00:00</span>
+    <button class="tb" id="b-full" hidden>전체 화면</button>
+    <button class="tb" id="b-snd" aria-pressed="true" title="효과음 켜기/끄기">소리 켬</button>
+    <button class="tb" id="b-pause" title="일시정지 (P)">일시정지</button>
+  </header>
+  <div id="toasts" aria-live="polite"></div>
+  <aside id="guide" aria-label="목표"></aside>
+  <nav id="tbar" aria-label="터치 도구">
+    <button id="t-box" aria-pressed="false">범위<br>선택</button>
+    <button id="t-same">같은<br>종류</button>
+    <button id="t-tc">마을<br>회관</button>
+    <button id="t-clear">선택<br>해제</button>
+    <div class="tgroups" aria-label="부대"></div>
+  </nav>
+  <div id="confirm" hidden><span id="cf-txt">지을 곳을 탭하세요</span><button class="go" id="cf-ok" disabled>짓기</button><button class="ghost" id="cf-no">취소</button></div>
+  <div id="lpring" aria-hidden="true" hidden></div>
+  <div id="hint" role="tooltip" hidden></div>
+  <footer id="panel">
+    <canvas id="mini" width="196" height="100"></canvas>
+    <section id="info"><div id="info-main"></div><div id="qrow" class="queue"></div></section>
+    <section id="cmds"></section>
+  </footer>
+  <div id="overlay"></div>
+</div>
+
+<!-- build:js -->
+<script src="js/00-data.js"></script>
+<script src="js/01-utils.js"></script>
+<script src="js/02-pathfinding.js"></script>
+<script src="js/03-world.js"></script>
+<script src="js/04-simulation.js"></script>
+<script src="js/05-ai.js"></script>
+<script src="js/06-step.js"></script>
+<script src="js/07-sprites.js"></script>
+<script src="js/08-render.js"></script>
+<script src="js/09-input.js"></script>
+<script src="js/10-sound.js"></script>
+<script src="js/11-save.js"></script>
+<script src="js/12-ui.js"></script>
+<script src="js/13-screens.js"></script>
+<script src="js/14-main.js"></script>
+<!-- /build:js -->
+<!-- /artifact:body -->
+</body>
+</html>

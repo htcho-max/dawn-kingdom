@@ -1,0 +1,6 @@
+node_modules/
+dist/
+test-results/
+*.png
+!docs/**/*.png
+.DS_Store
