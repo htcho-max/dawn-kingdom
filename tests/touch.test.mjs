@@ -72,6 +72,21 @@ test('tablet controls: tap, double tap, pan, pinch, box, groups, build confirm, 
     assert.ok(built, 'confirm builds');
     assert.ok(await ev(() => document.querySelector('#confirm').hidden), 'confirm bar closes after building');
 
+    // With villagers selected, tapping my town centre selects it instead of sending them there.
+    await ev(() => { const s = __rts.G.starts[0]; __rts.center(s.x, s.y); __rts.zoom(1.3); __rts.select(__rts.G.units.filter((u) => u.owner === 0 && u.type === 'villager')); }); await wait(150);
+    const tc = await find('tc'); assert.ok(tc, 'town centre on screen');
+    await tap(tc.x, tc.y);
+    assert.deepEqual(await selected(), ['tc'], 'tap on own building selects it');
+    assert.ok(await page.isVisible('#desel'), 'deselect button shown');
+    await page.tap('#desel');
+    assert.equal((await selected()).length, 0, 'deselect button clears the selection');
+    assert.ok(!(await page.isVisible('#desel')) || (await wait(300), !(await page.isVisible('#desel'))), 'deselect button hides');
+    // Long press on my building with villagers selected gives them the order.
+    await ev(() => __rts.select(__rts.G.units.filter((u) => u.owner === 0 && u.type === 'villager'))); await wait(80);
+    await hold(tc.x, tc.y);
+    assert.equal(await ev(() => __rts.sel()[0].type), 'villager', 'long press keeps the villagers selected');
+    assert.ok(await ev(() => __rts.sel().every((u) => u.state !== 'idle' || u.tgt)), 'villagers received an order');
+
     // Long press: matchup hint on an enemy, attack-move on ground.
     await ev(() => {
       const R = __rts, s = R.G.starts[0], my = [];
@@ -89,10 +104,16 @@ test('tablet controls: tap, double tap, pan, pinch, box, groups, build confirm, 
   } finally { await g.close(); }
 });
 
-test('desktop browsers stay in mouse mode', async () => {
+test('desktop browsers stay in mouse mode and do not edge-scroll by default', async () => {
   const g = await openGame();
   try {
     assert.ok(!(await g.ev(() => document.body.classList.contains('touch'))));
     assert.ok(!(await g.page.isVisible('#tbar')));
+    await g.page.click('#go');
+    await g.page.mouse.move(640, 400); await g.page.mouse.move(2, 400);
+    const c0 = await g.ev(() => __rts.cam); await g.page.waitForTimeout(600);
+    assert.deepEqual(await g.ev(() => __rts.cam), c0, 'mouse at the screen edge does not move the camera');
+    await g.page.keyboard.down('ArrowRight'); await g.page.waitForTimeout(400); await g.page.keyboard.up('ArrowRight');
+    assert.ok((await g.ev(() => __rts.cam)).x > c0.x, 'arrow keys move the camera');
   } finally { await g.close(); }
 });

@@ -48,6 +48,10 @@ button:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
 button.qi{cursor:pointer;font-family:inherit;color:var(--text)}
 button.qi:hover{border-color:var(--bad);text-decoration:line-through}
 #info-main{display:flex;flex-direction:column;gap:6px}
+#info{position:relative}
+#desel{position:absolute;top:0;right:0;z-index:1;min-height:40px;padding:6px 12px;background:#2b3550;border:1px solid var(--brass-dim);border-radius:8px;font-size:13px;cursor:pointer}
+#desel[hidden]{display:none}
+body.touch #info-main>h3:first-child{padding-right:130px}
 .agechip{font-family:var(--f-display);font-size:13px;color:var(--brass);border:1px solid var(--brass-dim);border-radius:999px;padding:2px 10px;white-space:nowrap}
 .cmd .lock{font-family:var(--f-body);color:var(--brass);font-size:10px}
 .cmd.tech{background:#26304a}

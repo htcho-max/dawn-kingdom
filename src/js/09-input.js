@@ -137,6 +137,7 @@ function tryPlace(p){
 function startPlace(t){if(placing===t){cancelModes();toast('건설을 취소했습니다');return}if(BD[t].age>G.players[0].age){toast(AGE_N[BD[t].age]+'가 필요합니다',true);return}if(!afford(0,BD[t].cost)){toast(lack(0,BD[t].cost),true);return}cancelModes();placing=t;cvs.style.cursor='crosshair';if(touchUI){setConfirm(t==='wall'?'성벽 시작 지점을 탭하세요':BD[t].name+' · 지을 곳을 탭하세요',false);return}toast(t==='wall'?'성벽 시작점을 누른 채 끝점까지 끌거나, 두 지점을 차례로 클릭하세요':BD[t].name+' 위치를 고르세요 (우클릭·Esc로 취소)')}
 
 const touches=new Map();let pinch=null,boxNext=false,touchGhost=false,touchUI=false,autoTouch=false;
+let edgeScroll=false;try{edgeScroll=localStorage.getItem('dawn.edge')==='1'}catch(e){}
 let touchPref='auto';try{touchPref=localStorage.getItem('dawn.touch')||'auto'}catch(e){}
 try{autoTouch=matchMedia('(pointer:coarse)').matches||(navigator.maxTouchPoints>0&&!matchMedia('(hover:hover)').matches)}catch(e){}
 function applyTouch(){const on=touchPref==='on'||(touchPref==='auto'&&autoTouch);if(on===touchUI&&document.body.classList.contains('touch')===on)return;touchUI=on;document.body.classList.toggle('touch',on);sigCache='';if(G)renderPanel(true);resize();syncTbar()}
@@ -156,6 +157,7 @@ function longPress(p){
   if(placing||cmdMode)return;
   const o=pick(p.x,p.y,true),mil=sel.filter(u=>u.kind==='unit'&&u.owner===0&&!['vil','trade'].includes(UD[u.type].cls));
   if(o&&o.kind!=='res'&&foe(0,o.owner)&&mil.length){const cnt={};for(const u of mil)cnt[u.type]=(cnt[u.type]||0)+1;const A=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0];showHintAt(matchup(mil.find(u=>u.type===A),o),p);return}
+  if(o&&o.kind==='bld'&&o.owner===0&&sel.some(s=>s.owner===0&&s.kind==='unit')){command(p,o);toast(o.built<1?'건설을 돕습니다':o.hp<o.maxHp?'수리하거나 들어갑니다':BD[o.type].drop||o.type==='tc'?'자원을 내려놓거나 주둔합니다':'명령을 내렸습니다');return}
   if(o&&o.kind==='unit'&&o.owner===0){selectArr(selectSameOnScreen([o.type]));toast('화면 안의 '+UD[o.type].name+' '+sel.length+'명을 골랐습니다');return}
   if(mil.length&&(!o||o.kind==='res')){doAmove(p);toast('공격 이동');return}
   if(o)selectArr([o]);
@@ -172,6 +174,7 @@ function syncTbar(){
 $('#t-box').onclick=()=>{boxNext=!boxNext;syncTbar();if(boxNext)toast('끌어서 범위를 정하세요')};
 $('#t-same').onclick=()=>{if(!G)return;const ts=[...new Set(sel.filter(u=>u.kind==='unit'&&u.owner===0).map(u=>u.type))];if(!ts.length){toast('유닛을 먼저 고르세요');return}selectArr(selectSameOnScreen(ts))};
 $('#t-tc').onclick=()=>{if(!G)return;const tc=G.blds.find(b=>b.owner===0&&b.type==='tc'&&!b.dead);if(tc){selectArr([tc]);centerOn(tc)}};
+$('#desel').onclick=()=>{if(!G)return;cancelModes();selectArr([])};
 $('#t-clear').onclick=()=>{if(!G)return;cancelModes();selectArr([])};
 {const fb=$('#b-full');if(document.fullscreenEnabled&&document.documentElement.requestFullscreen){fb.hidden=false;
   fb.onclick=()=>{if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});else document.documentElement.requestFullscreen().catch(()=>toast('이 화면에서는 전체 화면을 쓸 수 없습니다',true))};
@@ -231,7 +234,9 @@ cvs.addEventListener('pointerup',e=>{
     const ownUnits=sel.some(s=>s.owner===0&&s.kind==='unit');
     const ownBld=sel.length===1&&sel[0].kind==='bld'&&sel[0].owner===0;
     if(o&&o.owner===0&&o.kind==='unit'){clickSelect(p,false);return}
-    if(o&&o.owner===0&&o.kind==='bld'&&!(ownUnits&&(o.built<1||o.type==='farm'||BD[o.type].drop))){selectArr([o]);return}
+    // Touch: tapping my building selects it. Only unfinished buildings and farms take a
+    // villager order on tap; dropping off, garrisoning and repairing use a long press.
+    if(o&&o.owner===0&&o.kind==='bld'&&!(ownUnits&&(o.built<1||(o.type==='farm'&&sel.some(s=>s.owner===0&&s.type==='villager'))))){selectArr([o]);return}
     if(ownUnits||(ownBld&&!(o&&o.owner===0))){command(p,o);return}
     selectArr(o?[o]:[]);
   }

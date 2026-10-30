@@ -60,6 +60,7 @@ function renderQueue(e){
 }
 function renderPanel(force){
   if(!G)return;
+  {const d=$('#desel');const on=touchUI&&sel.length>0;if(d.hidden===on)d.hidden=!on}
   const P=G.players[0];
   const e0=sel[0];
   const sig=sel.map(e=>e.id+(e.built<1?'f':'')).join(',')+'|'+buildPage+'|'+P.age+'|'+P.tech.size+'|'+(e0&&e0.queue?e0.queue.join(','):'')+'|'+P.price.food+','+P.price.wood+'|'+(e0&&e0.garrison?e0.garrison.length:'')+'|'+(e0&&e0.repeat||'');

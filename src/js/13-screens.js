@@ -4,7 +4,7 @@ const overlay=$('#overlay');
 const HELP=`<dl class="help">
 <dt>좌클릭 · 드래그</dt><dd>유닛·건물 선택 (Shift로 추가)</dd>
 <dt>우클릭</dt><dd>이동 · 채집 · 건설 · 공격 · 집결지 지정</dd>
-<dt>방향키 · 미니맵 · 가장자리</dt><dd>시야 이동 (가운데 버튼 드래그도 가능)</dd>
+<dt>방향키 · 미니맵</dt><dd>시야 이동 (가운데 버튼 드래그도 가능, 가장자리 스크롤은 일시정지 → 조작에서 켜기)</dd>
 <dt>휠 · + / −</dt><dd>확대·축소 (터치는 두 손가락)</dd>
 <dt>Q W E R T Y U I O</dt><dd>명령 패널 단축키</dd>
 <dt>A</dt><dd>공격 이동: 가는 길의 적과 싸우며 이동</dd>
@@ -15,7 +15,8 @@ const HELP=`<dl class="help">
 <dt>H / . / P / B</dt><dd>마을회관 / 쉬는 일꾼 / 일시정지 / 종 울리기</dd>
 <dt>터치 · 탭</dt><dd>선택 / 선택한 뒤 땅·적·자원을 탭하면 이동·공격·채집 / 두 번 탭하면 같은 종류</dd>
 <dt>터치 · 끌기</dt><dd>한 손가락 시야 이동, 두 손가락 확대·이동, 길게 누른 뒤 끌면 범위 선택</dd>
-<dt>터치 · 길게 누르기</dt><dd>적 위: 상성 보기 / 빈 땅: 공격 이동 / 내 유닛: 같은 종류 / 명령 버튼: 설명</dd>
+<dt>터치 · 길게 누르기</dt><dd>적 위: 상성 보기 / 빈 땅: 공격 이동 / 내 유닛: 같은 종류 / 내 건물(유닛 선택 중): 자원 내려놓기·주둔·수리 / 명령 버튼: 설명</dd>
+<dt>터치 · 선택 해제</dt><dd>아래 정보창의 ✕ 선택 해제, 또는 오른쪽 도구의 선택 해제. 내 건물을 탭하면 유닛을 고른 상태여도 건물이 선택됩니다</dd>
 <dt>터치 · 오른쪽 도구</dt><dd>범위 선택, 같은 종류, 마을회관, 부대 1~4 (탭 불러오기 · 길게 눌러 지정)</dd>
 </dl>`;
 function showStart(){
@@ -84,10 +85,11 @@ function togglePause(refresh){
   if(paused){overlay.hidden=false;overlay.innerHTML=`<div class="card"><h1>일시정지</h1>
     <h2>저장 · 불러오기</h2><div class="slots">${slotRows(true)}</div><p class="note">저장은 이 브라우저에만 남습니다. 1분마다 자동 저장됩니다.</p>
     <h2>다른 기기로 옮기기</h2>${XFER_HTML}
-    <h2>조작</h2><div class="setrow"><label class="field">터치 조작<select id="touch-pref"><option value="auto">자동 (터치 기기에서 켬)</option><option value="on">항상 켜기</option><option value="off">끄기</option></select></label></div>
+    <h2>조작</h2><div class="setrow"><label class="field">터치 조작<select id="touch-pref"><option value="auto">자동 (터치 기기에서 켬)</option><option value="on">항상 켜기</option><option value="off">끄기</option></select></label><label class="field">화면 가장자리 스크롤<select id="edge-pref"><option value="0">끄기 (방향키로 이동)</option><option value="1">켜기</option></select></label></div>
     <h2>소리</h2><div class="sound"><label><input type="checkbox" id="snd-on" ${SFX.on?'checked':''}> 효과음</label><input type="range" id="snd-vol" min="0" max="1" step="0.05" value="${SFX.vol}" aria-label="음량"></div>
     <h2>조작</h2>${HELP}<div class="row"><button class="go" id="resume">계속하기</button><button class="ghost" id="quit">처음 화면으로</button></div></div>`;
     wireSlots(overlay);wireXfer(overlay,true);
+    $('#edge-pref').value=edgeScroll?'1':'0';$('#edge-pref').onchange=e=>{edgeScroll=e.target.value==='1';try{localStorage.setItem('dawn.edge',edgeScroll?'1':'0')}catch(_){}};
     $('#touch-pref').value=touchPref;$('#touch-pref').onchange=e=>{touchPref=e.target.value;try{localStorage.setItem('dawn.touch',touchPref)}catch(_){}applyTouch()};
     $('#snd-on').onchange=e=>{SFX.on=e.target.checked;audioInit();sfxApply();sfxSave()};
     $('#snd-vol').oninput=e=>{SFX.vol=+e.target.value;sfxApply();sfxSave()};
