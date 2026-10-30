@@ -19,10 +19,28 @@ const HELP=`<dl class="help">
 <dt>터치 · 선택 해제</dt><dd>아래 정보창의 ✕ 선택 해제, 또는 오른쪽 도구의 선택 해제. 내 건물을 탭하면 유닛을 고른 상태여도 건물이 선택됩니다</dd>
 <dt>터치 · 오른쪽 도구</dt><dd>범위 선택, 같은 종류, 마을회관, 부대 1~4 (탭 불러오기 · 길게 눌러 지정)</dd>
 </dl>`;
-function showStart(){
-  started=false;overlay.hidden=false;
+// ---------- install as an app (PWA) ----------
+let installEvt=null;
+const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const isStandalone=()=>{try{return matchMedia('(display-mode: standalone)').matches||matchMedia('(display-mode: fullscreen)').matches||!!navigator.standalone}catch(e){return false}};
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvt=e;refreshInstall()});
+window.addEventListener('appinstalled',()=>{installEvt=null;refreshInstall();toast('홈 화면에 설치했습니다')});
+function installHTML(){
+  if(isStandalone()||!document.querySelector('link[rel=manifest]')||!/^https?:$/.test(location.protocol))return'';
+  if(installEvt)return`<div class="install"><button class="go sm" id="inst">앱으로 설치</button><span>홈 화면 아이콘으로 바로 실행하고, 인터넷이 없어도 할 수 있습니다.</span></div>`;
+  if(isIOS)return`<div class="install"><span>iPad·iPhone에서는 Safari의 공유 버튼 → <b>홈 화면에 추가</b>를 누르면 앱처럼 전체 화면으로 할 수 있습니다.</span></div>`;
+  return'';
+}
+function refreshInstall(){const el=document.getElementById('install-slot');if(!el)return;el.innerHTML=installHTML();
+  const b=document.getElementById('inst');if(b)b.onclick=async()=>{const ev=installEvt;if(!ev)return;ev.prompt();try{await ev.userChoice}catch(e){}installEvt=null;refreshInstall()}}
+function showStart(tab){
+  started=false;overlay.hidden=false;try{tab=tab||localStorage.getItem('dawn.tab')||'free'}catch(e){tab=tab||'free'}
   overlay.innerHTML=`<div class="card">
   <h1>새벽의 왕국</h1>
+  <div id="install-slot"></div>
+  <div class="tabs modes" role="tablist" aria-label="게임 방식"><button role="tab" data-tab="free" aria-selected="${tab!=='camp'}">자유 대전</button><button role="tab" data-tab="camp" aria-selected="${tab==='camp'}">캠페인</button></div>
+  <section id="tab-camp" ${tab==='camp'?'':'hidden'}><p class="lede">짧은 임무 여섯 개로 이루어진 이야기입니다. 임무마다 목표와 조건이 다르고, 마치면 다음 임무가 열립니다.</p>${campaignHTML()}</section>
+  <section id="tab-free" ${tab==='camp'?'hidden':''}>
   <p class="lede">땅과 부족을 정하고, 일꾼 셋과 마을회관 하나로 시작합니다. 자원을 모아 시대를 발전시키고, 상성을 맞춘 군대로 적 부족의 마을회관을 모두 무너뜨리세요. 컴퓨터 부족들도 같은 방식으로 성장하며 가까운 적부터 공격합니다.</p>
   <h2>땅</h2>
   <div class="diff" id="opt-size">
@@ -42,29 +60,36 @@ function showStart(){
     <label class="field">기본 난이도<select id="opt-diff"><option value="easy">쉬움 · 첫 공격 약 8분</option><option value="normal">보통 · 첫 공격 약 5분</option><option value="hard">어려움 · 빠른 확장</option></select></label>
   </div>
   <div class="tribes" id="tribes" role="table" aria-label="부족별 팀과 난이도"></div>
+  <p class="note" id="civ-desc"></p>
+  <details class="xd"><summary>문명 소개</summary><dl class="help civs">${CIV_KEYS.map(k=>`<dt>${CIV[k].name}</dt><dd>${civDesc(k)}</dd>`).join('')}</dl></details>
   <p class="note" id="team-warn" hidden></p>
+  <div class="row"><button class="go" id="go">전투 시작</button></div></section>
   <h2>조작</h2>${HELP}
   ${SLOTS.some(k=>slotMeta(k))?`<h2>이어하기</h2><div class="slots">${slotRows(false)}</div>`:''}
-  <details class="xd"><summary>저장 코드로 불러오기</summary>${XFER_HTML}</details>
-  <div class="row"><button class="go" id="go">전투 시작</button></div></div>`;
-  wireSlots(overlay);wireXfer(overlay,false);
-  let pref={size:64,np:2,layout:'ring',teams:'ffa',diff:'normal',mtype:'grass',teamList:[],diffs:[]};try{Object.assign(pref,JSON.parse(localStorage.getItem('dawn.setup')||'{}'))}catch(e){}
+  <details class="xd"><summary>저장 코드로 불러오기</summary>${XFER_HTML}</details></div>`;
+  wireSlots(overlay);wireXfer(overlay,false);wireCampaign(overlay);refreshInstall();
+  overlay.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{const t=b.dataset.tab;try{localStorage.setItem('dawn.tab',t)}catch(e){}
+    overlay.querySelectorAll('[data-tab]').forEach(x=>x.setAttribute('aria-selected',x===b?'true':'false'));$('#tab-camp').hidden=t!=='camp';$('#tab-free').hidden=t==='camp'});
+  let pref={size:64,np:2,layout:'ring',teams:'ffa',diff:'normal',mtype:'grass',teamList:[],diffs:[],civs:[]};try{Object.assign(pref,JSON.parse(localStorage.getItem('dawn.setup')||'{}'))}catch(e){}
   const szIn=[...overlay.querySelectorAll('input[name=sz]')],npSel=$('#opt-np'),tmSel=$('#opt-teams'),dfSel=$('#opt-diff'),mtSel=$('#opt-mtype'),tb=$('#tribes');
-  let teamList=(pref.teamList||[]).slice(),diffs=(pref.diffs||[]).slice();
+  let teamList=(pref.teamList||[]).slice(),diffs=(pref.diffs||[]).slice(),civs=(pref.civs||[]).slice();
   const curSize=()=>+(szIn.find(i=>i.checked)||szIn[0]).value;
   const fillNp=()=>{const mx=MAPS[curSize()].max,cur=Math.min(mx,+npSel.value||pref.np);npSel.innerHTML='';for(let n=2;n<=mx;n++)npSel.insertAdjacentHTML('beforeend',`<option value="${n}"${n===cur?' selected':''}>${n}부족 (나 + 컴퓨터 ${n-1})</option>`)};
   const preset=()=>{const np=+npSel.value,m=tmSel.value;if(m==='custom')return;
     teamList=Array.from({length:np},(_,i)=>m==='two'?String(i<Math.ceil(np/2)?0:1):m==='alone'?String(i?1:0):'solo')};
   const sides=()=>{const np=+npSel.value,set=new Set();for(let i=0;i<np;i++){const t=teamList[i];set.add(t===undefined||t==='solo'?'s'+i:'t'+t)}return set.size};
   const renderTribes=()=>{const np=+npSel.value;
-    for(let i=0;i<np;i++){if(teamList[i]===undefined)teamList[i]='solo';if(!diffs[i])diffs[i]=dfSel.value}
-    tb.innerHTML=`<div class="trow th" role="row"><span role="columnheader">부족</span><span role="columnheader">팀</span><span role="columnheader">난이도</span></div>`+
+    for(let i=0;i<np;i++){if(teamList[i]===undefined)teamList[i]='solo';if(!diffs[i])diffs[i]=dfSel.value;if(!civs[i])civs[i]='random'}
+    tb.innerHTML=`<div class="trow th" role="row"><span role="columnheader">부족</span><span role="columnheader">문명</span><span role="columnheader">팀</span><span role="columnheader">난이도</span></div>`+
       Array.from({length:np},(_,i)=>`<div class="trow" role="row"><span class="tname" role="cell"><i class="dot" style="background:${OWN[i].c}"></i>${i?OWN[i].name:'나 (파란 부족)'}</span>
+      <select role="cell" data-civ="${i}" aria-label="${nameOf(i)} 문명"><option value="random">무작위</option>${CIV_KEYS.map(k=>`<option value="${k}">${CIV[k].name}</option>`).join('')}</select>
       <select role="cell" data-team="${i}" aria-label="${nameOf(i)} 팀"><option value="solo">혼자</option>${TEAM_N.map((t,k)=>`<option value="${k}">${t}</option>`).join('')}</select>
       ${i?`<select role="cell" data-diff="${i}" aria-label="${nameOf(i)} 난이도"><option value="easy">쉬움</option><option value="normal">보통</option><option value="hard">어려움</option></select>`:'<span class="sub" role="cell">플레이어</span>'}</div>`).join('');
     tb.querySelectorAll('[data-team]').forEach(e=>{e.value=teamList[+e.dataset.team];e.onchange=()=>{teamList[+e.dataset.team]=e.value;tmSel.value='custom';warn()}});
+    tb.querySelectorAll('[data-civ]').forEach(e=>{e.value=CIV[civs[+e.dataset.civ]]?civs[+e.dataset.civ]:'random';e.onchange=()=>{civs[+e.dataset.civ]=e.value;civNote()}});civNote();
     tb.querySelectorAll('[data-diff]').forEach(e=>{e.value=diffs[+e.dataset.diff];e.onchange=()=>{diffs[+e.dataset.diff]=e.value}});
     warn()};
+  const civNote=()=>{const k=civs[0],el=$('#civ-desc');el.innerHTML=CIV[k]?`<b>${CIV[k].name}</b> — ${civDesc(k)}`:'내 문명은 무작위로 정해집니다. 문명마다 보너스 두 가지와 고유 유닛이 있습니다.'};
   const warn=()=>{const w=$('#team-warn'),ok=sides()>=2;w.hidden=ok;w.textContent=ok?'':'모든 부족이 같은 팀입니다. 적어도 두 편으로 나눠 주세요.';$('#go').disabled=!ok};
   (szIn.find(i=>+i.value===+pref.size)||szIn[0]).checked=true;fillNp();npSel.value=String(Math.min(pref.np,MAPS[curSize()].max));
   $('#opt-layout').value=pref.layout;tmSel.value=pref.teams;dfSel.value=pref.diff;mtSel.value=MTYPES[pref.mtype]?pref.mtype:'grass';
@@ -75,7 +100,7 @@ function showStart(){
   tmSel.onchange=()=>{preset();renderTribes()};
   dfSel.onchange=()=>{diffs=diffs.map(()=>dfSel.value);renderTribes()};
   $('#go').onclick=()=>{if(sides()<2)return;audioInit();const np=+npSel.value;
-    const opt={diff:dfSel.value,size:curSize(),np,layout:$('#opt-layout').value,teams:tmSel.value,mtype:mtSel.value,teamList:teamList.slice(0,np),diffs:diffs.slice(0,np)};
+    const opt={diff:dfSel.value,size:curSize(),np,layout:$('#opt-layout').value,teams:tmSel.value,mtype:mtSel.value,teamList:teamList.slice(0,np),diffs:diffs.slice(0,np),civs:civs.slice(0,np).map(c=>CIV[c]?c:'random')};
     try{localStorage.setItem('dawn.setup',JSON.stringify(opt))}catch(e){}
     overlay.hidden=true;started=true;newGame(opt);resize();toast('왼쪽 위 목표를 따라가 보세요.')};
 }
@@ -96,14 +121,16 @@ function togglePause(refresh){
     $('#resume').onclick=()=>togglePause();$('#quit').onclick=()=>{saveTo('auto');paused=false;$('#b-pause').textContent='일시정지';G=null;showStart()}}
   else overlay.hidden=true;
 }
-function endGame(win){
+function endGame(win,reason){
   if(G.over)return;G.over=true;placing=null;play(win?'win':'lose');recordHist();
+  const mis=scnDef(),mi=mis?SCN_BY[mis.id]:-1;if(mis&&win)campWin();
   const s0=G.stats[0];$('#hint').hidden=true;$('#guide').hidden=true;
-  setTimeout(()=>{overlay.hidden=false;toastsEl.innerHTML='';
+  const g0=G;setTimeout(()=>{if(G!==g0)return;overlay.hidden=false;toastsEl.innerHTML='';
     const rows=G.players.map((P,o)=>{const st=G.stats[o],at=P.ageT||[];
       const res=P.out?`멸망 ${fmtT(P.outT||G.t)}`:(ally(0,o)?(win?'승리':'패배'):(win?'—':'승리'));
-      return`<tr${o===0?' class="me"':''}><th scope="row"><i class="dot" style="background:${OWN[o].c}"></i>${nameOf(o)}${teamTag(o)?` <small>${teamTag(o)}</small>`:''}</th><td>${res}</td><td>${at[1]!==undefined?fmtT(at[1]):'—'}</td><td>${at[2]!==undefined?fmtT(at[2]):'—'}</td><td>${st.kills}</td><td>${st.lost}</td><td>${st.gathered.toLocaleString('ko-KR')}</td><td>${st.trained}</td></tr>`}).join('');
-    overlay.innerHTML=`<div class="card wide"><h1>${win?'승리':'패배'}</h1><p class="lede">${win?(G.np>2?'마지막 경쟁 부족까지 무너졌습니다. ':'적 마을회관이 무너졌습니다. ')+'이 땅은 이제 당신의 왕국입니다.':'마을회관을 잃었습니다. 아래 기록에서 군대와 경제가 어디서 벌어졌는지 확인해 보세요.'}</p>
+      return`<tr${o===0?' class="me"':''}><th scope="row"><i class="dot" style="background:${OWN[o].c}"></i>${nameOf(o)}${civOf(o)?` <small>${civOf(o).short}</small>`:''}${teamTag(o)?` <small>${teamTag(o)}</small>`:''}</th><td>${res}</td><td>${at[1]!==undefined?fmtT(at[1]):'—'}</td><td>${at[2]!==undefined?fmtT(at[2]):'—'}</td><td>${st.kills}</td><td>${st.lost}</td><td>${st.gathered.toLocaleString('ko-KR')}</td><td>${st.trained}</td></tr>`}).join('');
+    const lede=mis?(win?`임무 「${mis.name}」을 마쳤습니다.${mi+1<SCN.length?' 다음 임무가 열렸습니다.':' 캠페인을 모두 마쳤습니다. 이 땅의 새벽은 당신의 것입니다.'}`:`임무 「${mis.name}」에 실패했습니다. ${reason||'마을회관을 잃었습니다.'}`):null;
+    overlay.innerHTML=`<div class="card wide"><h1>${mis?(win?'임무 완료':'임무 실패'):win?'승리':'패배'}</h1><p class="lede">${lede?lede:win?(G.np>2?'마지막 경쟁 부족까지 무너졌습니다. ':'적 마을회관이 무너졌습니다. ')+'이 땅은 이제 당신의 왕국입니다.':'마을회관을 잃었습니다. 아래 기록에서 군대와 경제가 어디서 벌어졌는지 확인해 보세요.'}</p>
     <div class="endstats"><div>경과 시간<b>${fmtT(G.t)}</b></div><div>모은 자원<b>${s0.gathered.toLocaleString('ko-KR')}</b></div><div>생산한 유닛<b>${s0.trained}</b></div><div>처치<b>${s0.kills}</b></div><div>잃은 유닛·건물<b>${s0.lost}</b></div></div>
     <h2>흐름</h2>
     <div class="tabs" role="tablist" aria-label="그래프 지표"><button role="tab" data-m="army" aria-selected="true">군대 규모</button><button role="tab" data-m="vil" aria-selected="false">일꾼 수</button><button role="tab" data-m="res" aria-selected="false">모은 자원 (누적)</button></div>
@@ -111,8 +138,10 @@ function endGame(win){
     <div class="legend">${G.players.map((P,o)=>`<span><svg width="22" height="8" aria-hidden="true"><line x1="1" y1="4" x2="21" y2="4" stroke="${OWN[o].c}" stroke-width="${o?2:3}" stroke-dasharray="${DASH[o]}"/></svg>${nameOf(o)}</span>`).join('')}</div>
     <h2>부족별 기록</h2>
     <div class="tblwrap"><table class="rtable"><thead><tr><th scope="col">부족</th><th scope="col">결과</th><th scope="col">봉건</th><th scope="col">성주</th><th scope="col">처치</th><th scope="col">잃음</th><th scope="col">모은 자원</th><th scope="col">생산</th></tr></thead><tbody>${rows}</tbody></table></div>
-    <div class="row"><button class="go" id="again">다시 하기</button></div></div>`;
-    $('#again').onclick=()=>{G=null;showStart()};
+    <div class="row">${mis&&win&&mi+1<SCN.length?'<button class="go" id="next">다음 임무</button>':''}${mis?'<button class="ghost" id="retry">다시 도전</button>':''}<button class="${mis?'ghost':'go'}" id="again">${mis?'캠페인 목록':'다시 하기'}</button></div></div>`;
+    $('#again').onclick=()=>{G=null;showStart(mis?'camp':undefined)};
+    if($('#next'))$('#next').onclick=()=>startMission(mi+1);
+    if($('#retry'))$('#retry').onclick=()=>startMission(mi);
     let metric='army';const tabs=[...overlay.querySelectorAll('.tabs button')];
     tabs.forEach(t=>t.onclick=()=>{metric=t.dataset.m;tabs.forEach(x=>x.setAttribute('aria-selected',x===t?'true':'false'));drawChart(metric)});
     drawChart(metric);

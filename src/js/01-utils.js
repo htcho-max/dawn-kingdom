@@ -26,7 +26,7 @@ function armOf(u){const D=UD[u.type],a=G.players[u.owner].m.arm[D.cls]||[0,0];re
 function speedOf(u){const D=UD[u.type];let s=D.speed;if(D.cls==='vil')s*=G.players[u.owner].m.vilSpd;return u.gspd?Math.min(s,u.gspd):s}
 function capOfU(u){return CAP+G.players[u.owner].m.carry}
 function calcDmg(src,tgt){
-  if(src.kind==='bld'){const D=BD[src.type];return Math.max(1,D.atk.dmg+G.players[src.owner].m.patk-armOf(tgt)[1])}
+  if(src.kind==='bld'){const D=BD[src.type];return Math.max(1,D.atk.dmg+G.players[src.owner].m.patk+(civIs(src.owner,'stone')?1:0)-armOf(tgt)[1])}
   const D=UD[src.type];
   if(tgt.kind==='bld')return D.siege?D.siege:Math.max(1,atkOf(src)*D.bmul);
   const a=armOf(tgt),cls=UD[tgt.type].cls;

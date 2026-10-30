@@ -12,7 +12,8 @@ function occupy(o,on){
 }
 function placeBld(type,owner,tx,ty,complete){
   const D=BD[type];
-  const b={kind:'bld',id:G.nid++,type,owner,tx,ty,w:D.w,h:D.h,maxHp:D.hp,hp:complete?D.hp:Math.max(1,D.hp*0.1),built:complete?1:0,queue:[],qt:0,rally:null,cd:0,food:type==='farm'?D.food+G.players[owner].m.farm:0,garrison:[]};
+  const mh=civIs(owner,'stone')&&type!=='farm'?Math.round(D.hp*1.25):D.hp;
+  const b={kind:'bld',id:G.nid++,type,owner,tx,ty,w:D.w,h:D.h,maxHp:mh,hp:complete?mh:Math.max(1,mh*0.1),built:complete?1:0,queue:[],qt:0,rally:null,cd:0,food:type==='farm'?D.food+G.players[owner].m.farm:0,garrison:[]};
   occupy(b,true);G.blds.push(b);return b;
 }
 function canPlace(type,tx,ty,owner,margin){
@@ -136,12 +137,14 @@ function newGame(opt){
     diff:DF,diffKey:opt.diff,visT:0,aiT:Array.from({length:np},(_,i)=>1+i*0.137),uiT:0,alertT:-99,over:false,
     team:teamsFor(opt,np),aiDiff,mtype:opt.mtype,
     ais:Array.from({length:np},(_,i)=>i?{waveAt:DIFF[aiDiff[i]].firstAt+(i-1)*25+Math.random()*40,wave:DIFF[aiDiff[i]].wave,flip:false,waves:0}:null)};
+  G.players.forEach((P,i)=>{const c=opt.civs&&opt.civs[i];P.civ=CIV[c]?c:c===null?null:CIV_KEYS[Math.floor(Math.random()*CIV_KEYS.length)];applyCivStart(i)});
   genMap(seed,np,opt.layout,opt.mtype);
   bakeTerrain(seed);
   let tc0=null;
-  G.starts.forEach((s,i)=>{const tc=placeBld('tc',i,Math.round(s.x-1.5),Math.round(s.y-1.5),true);if(i===0)tc0=tc;for(let k=0;k<3;k++){const q=freeAround(tc,k*3);spawnUnit('villager',i,q.x,q.y)}});
+  G.starts.forEach((s,i)=>{const tc=placeBld('tc',i,Math.round(s.x-1.5),Math.round(s.y-1.5),true);if(i===0)tc0=tc;for(let k=0;k<3;k++){const q=freeAround(tc,k*3);spawnUnit('villager',i,q.x,q.y)}const q=freeAround(tc,10);spawnUnit('scout',i,q.x,q.y)});
   sel=[];placing=null;paused=false;
   computeVis();
   Z=W<720?0.8:1;centerOn(tc0);
+  G.scn=null;if(opt.scn)scnInit(opt);
   sigCache='';renderPanel(true);
 }

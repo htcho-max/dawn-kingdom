@@ -1,6 +1,6 @@
 {
   "name": "dawn-kingdom",
-  "version": "0.9.1",
+  "version": "0.10.0",
   "private": true,
   "description": "새벽의 왕국 — 브라우저에서 돌아가는 아이소메트릭 실시간 전략 게임",
   "type": "module",

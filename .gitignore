@@ -4,3 +4,4 @@ test-results/
 *.png
 !docs/**/*.png
 .DS_Store
+!src/icons/*.png

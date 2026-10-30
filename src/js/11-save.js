@@ -11,7 +11,7 @@ function serialize(){
   return JSON.stringify({v:1,meta:{when:Date.now(),t:G.t,diff:(MTYPES[G.mtype]||MTYPES.grass).name+' · '+G.diff.name,age:AGE_N[P0.age],map:MAPS[MW]?MAPS[MW].name:'',np:G.np},
     v2:1,size:MW,np:G.np,opt:G.opt,team:G.team,aiDiff:G.aiDiff,mtype:G.mtype||'grass',starts:G.starts,road:packBits(G.road||new Uint8Array(N)),ais:G.ais,
     seed:G.seed,diffKey:G.diffKey,t:G.t,nid:G.nid,stats:G.stats,exp:packBits(G.exp),water:packBits(G.water),
-    hist:G.hist||null,guide:G.guide||0,players:G.players.map(P=>({ageT:P.ageT||[],outT:P.outT,out:!!P.out,food:P.food,wood:P.wood,gold:P.gold,age:P.age,tech:[...P.tech],m:P.m,price:P.price})),
+    hist:G.hist||null,guide:G.guide||0,scn:G.scn||null,players:G.players.map(P=>({civ:P.civ||null,ageT:P.ageT||[],outT:P.outT,out:!!P.out,food:P.food,wood:P.wood,gold:P.gold,age:P.age,tech:[...P.tech],m:P.m,price:P.price})),
     groups:Object.fromEntries(Object.entries(G.groups).map(([k,a])=>[k,a.filter(o=>!o.dead).map(o=>o.id)])),
     res:G.res.filter(r=>!r.dead).map(r=>[r.id,r.sub,r.tx,r.ty,Math.round(r.amount*10)/10,r.max,+r.v.toFixed(3)]),
     blds:G.blds.filter(b=>!b.dead).map(b=>({id:b.id,type:b.type,owner:b.owner,tx:b.tx,ty:b.ty,hp:b.hp,built:b.built,queue:b.queue,qt:b.qt,cd:b.cd,food:b.food,repeat:b.repeat||null,rally:b.rally?{x:b.rally.x,y:b.rally.y,obj:id(b.rally.obj)}:null})),
@@ -29,8 +29,8 @@ function deserialize(str){
     team:S.team||Array.from({length:np},(_,i)=>100+i),ais:S.ais||[null,S.ai],aiDiff:S.aiDiff||Array.from({length:np},()=>S.diffKey),mtype:S.mtype||'grass',starts:S.starts||[{x:8.5,y:8.5},{x:55.5,y:55.5}]};
   if(S.road)for(let i=0;i<N;i++)G.road[i]=S.road.charCodeAt(i)===49?1:0;
   for(let i=0;i<N;i++){G.exp[i]=S.exp.charCodeAt(i)===49?1:0;if(S.water.charCodeAt(i)===49){G.water[i]=1;G.block[i]=WATER;G.place[i]=WATER}}
-  G.hist=S.hist||null;G.guide=S.guide||0;
-  S.players.forEach((q,i)=>{const P=G.players[i];Object.assign(P,{ageT:q.ageT||[],outT:q.outT,out:!!q.out,food:q.food,wood:q.wood,gold:q.gold,age:q.age,tech:new Set(q.tech),m:q.m,price:q.price||{food:100,wood:100}})});
+  G.hist=S.hist||null;G.guide=S.guide||0;G.scn=S.scn&&SCN_BY[S.scn.id]!==undefined?S.scn:null;
+  S.players.forEach((q,i)=>{const P=G.players[i];Object.assign(P,{civ:q.civ||null,ageT:q.ageT||[],outT:q.outT,out:!!q.out,food:q.food,wood:q.wood,gold:q.gold,age:q.age,tech:new Set(q.tech),m:q.m,price:q.price||{food:100,wood:100}})});
   const byId=new Map();
   for(const [id,sub,tx,ty,amt,max,v] of S.res){const r=placeRes(sub,tx,ty,amt);if(!r)continue;r.id=id;r.max=max;r.v=v;byId.set(id,r)}
   for(const q of S.blds){const b=placeBld(q.type,q.owner,q.tx,q.ty,true);Object.assign(b,{repeat:q.repeat||null,id:q.id,hp:q.hp,built:q.built,queue:q.queue,qt:q.qt,cd:q.cd,food:q.food});b.rallyRaw=q.rally;byId.set(q.id,b)}

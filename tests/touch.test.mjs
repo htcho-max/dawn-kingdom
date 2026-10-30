@@ -23,6 +23,8 @@ test('tablet controls: tap, double tap, pan, pinch, box, groups, build confirm, 
     assert.ok(await ev(() => document.body.classList.contains('touch')), 'touch mode turns on automatically');
     assert.ok(await page.isVisible('#tbar'), 'touch toolbar visible');
 
+    // Keep the selection counts simple: send the starting scout away.
+    await ev(() => { const G = __rts.G, sc = G.units.find((u) => u.owner === 0 && u.type === 'scout'); if (sc) { sc.x = 2 * 32; sc.y = 2 * 32; } });
     await ev(() => { const s = __rts.G.starts[0]; __rts.center(s.x, s.y); __rts.zoom(1.3); }); await wait(150);
     const v = await find('villager'); assert.ok(v, 'villager on screen');
     await tap(v.x, v.y);

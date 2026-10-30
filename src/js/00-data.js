@@ -33,6 +33,11 @@ const UD={
   longbow:{name:'장궁병',cls:'arch',hp:35,atk:6,at:'p',arm:[0,1],range:7,rate:2,speed:56,los:9,cost:{wood:35,gold:40},time:14,bmul:0.3,age:2,bonus:{inf:2},desc:'성에서만 훈련하는 장거리 궁수. 탑보다 멀리서 쏩니다. 기병에게 약합니다.'},
   trebuchet:{name:'투석기',cls:'siege',hp:150,atk:0,siege:90,at:'m',arm:[1,10],range:11,rate:6,speed:24,los:12,cost:{wood:200,gold:200},time:30,bmul:0,age:2,onlyBld:true,proj:'stone',desc:'아주 먼 거리에서 건물·성벽을 부숩니다. 유닛은 공격하지 못하니 호위가 필요합니다.'},
   cart:{name:'교역 수레',cls:'trade',hp:70,atk:0,at:'m',arm:[0,1],range:0.9,rate:9,speed:66,los:5,cost:{food:100,gold:50},time:18,bmul:0,age:1,noAtk:true,desc:'다른 시장을 우클릭하면 두 시장을 오가며 금을 벌어 옵니다. 멀수록 많이 법니다.'},
+  horsearcher:{name:'궁기병',cls:'cav',hp:70,atk:6,at:'p',arm:[1,2],range:4,rate:1.9,speed:86,los:7,cost:{wood:40,gold:60},time:18,bmul:0.3,age:1,bonus:{inf:2},civ:'horse',desc:'바람의 기마족 고유 유닛. 말을 타고 활을 쏘며 보병·궁수를 잡습니다. 창병과 다른 기병에게 약합니다.'},
+  skirm:{name:'척후병',cls:'arch',hp:30,atk:3,at:'p',arm:[0,3],range:4,rate:2,speed:56,los:7,cost:{food:25,wood:35},time:12,bmul:0.2,age:1,bonus:{arch:4},civ:'bow',desc:'숲의 궁술족 고유 유닛. 화살에 강하고 궁수를 잘 잡는 값싼 투척병. 기병·검사에게 약합니다.'},
+  shield:{name:'방패병',cls:'inf',hp:60,atk:5,at:'m',arm:[1,4],range:0.9,rate:1.7,speed:50,los:5,cost:{food:55,gold:30},time:14,bmul:0.8,age:1,bonus:{arch:2},civ:'stone',desc:'바위산 성채족 고유 유닛. 큰 방패로 화살을 막으며 궁수에게 다가갑니다. 느립니다.'},
+  camel:{name:'낙타 기병',cls:'cav',hp:95,atk:6,at:'m',arm:[0,1],range:0.9,rate:1.8,speed:84,los:7,cost:{food:60,gold:45},time:16,bmul:0.4,age:1,bonus:{cav:8},civ:'trade',desc:'강가 상인족 고유 유닛. 다른 기병을 잘 잡는 기병. 창병·검사에게 약합니다.'},
+  javelin:{name:'투창병',cls:'inf',hp:40,atk:5,at:'p',arm:[0,1],range:4,rate:2.3,speed:56,los:6,cost:{food:45,gold:30},time:11,bmul:0.6,age:1,bonus:{cav:5},civ:'farm',desc:'들판의 농경족 고유 유닛. 창을 던지는 보병으로 기병 상대로 강합니다. 궁수에게 약합니다.'},
   ram:{name:'충차',cls:'siege',hp:180,atk:0,siege:40,at:'m',arm:[0,8],range:0.9,rate:3,speed:32,los:4,cost:{wood:160,gold:75},time:24,bmul:0,age:2,onlyBld:true,desc:'건물·성벽을 부수는 공성 무기. 유닛은 공격하지 못하고 화살에 강합니다.'},
 };
 const BD={
@@ -52,6 +57,24 @@ const BD={
   wall:{name:'성벽',w:1,h:1,hp:600,cost:{wood:6},time:5,los:2,age:1,desc:'드래그하거나 두 지점을 클릭해 길게 짓습니다. 한 칸에 목재 6.'},
   gate:{name:'성문',w:1,h:1,hp:900,cost:{wood:40},time:12,los:3,age:1,desc:'내 유닛만 지나갈 수 있는 문. 성벽 사이에 끼워 넣으세요.'},
 };
+// Civilizations: each has a couple of bonuses and one unique unit trained at uuAt.
+const CIV={
+  horse:{name:'바람의 기마족',short:'기마',uu:'horsearcher',uuAt:'stable',bon:['기병 체력 +20%','마구간 생산 25% 빠름']},
+  bow:{name:'숲의 궁술족',short:'궁술',uu:'skirm',uuAt:'barracks',bon:['원거리 유닛·탑 사거리 +1','목재 채집 +15%']},
+  stone:{name:'바위산 성채족',short:'성채',uu:'shield',uuAt:'barracks',bon:['건물 체력 +25%','탑·마을회관·성 화살 공격 +1']},
+  trade:{name:'강가 상인족',short:'상인',uu:'camel',uuAt:'stable',bon:['금 채집 +20%','교역 수익 +40%, 시장 시세 변동 절반']},
+  farm:{name:'들판의 농경족',short:'농경',uu:'javelin',uuAt:'barracks',bon:['농장 식량 +100','일꾼 생산 25% 빠름']},
+};
+const CIV_KEYS=Object.keys(CIV);
+const civOf=o=>G&&G.players[o]?CIV[G.players[o].civ]||null:null;
+const civIs=(o,k)=>!!G&&!!G.players[o]&&G.players[o].civ===k;
+function civDesc(k){const c=CIV[k];return c?`${c.bon.join(' · ')} · 고유 유닛 ${UD[c.uu].name}(${BD[c.uuAt].name})`:''}
+function trainOf(b){const L=BD[b.type].train||[],c=civOf(b.owner);return c&&c.uuAt===b.type?L.concat(c.uu):L}
+// Bonuses that live in the player's modifier block (saved with the game).
+function applyCivStart(o){const P=G.players[o],m=P.m;
+  if(P.civ==='bow'){m.prng+=1;m.gw*=1.15}
+  else if(P.civ==='trade')m.gg*=1.2;
+  else if(P.civ==='farm')m.farm+=100;}
 const BUILD_PAGES=[['house','farm','lumber','mill','mine','market','tc'],['barracks','blacksmith','stable','siege'],['tower','wall','gate','castle']];
 const AGE_N=['암흑 시대','봉건 시대','성주 시대'];
 const CLS_N={vil:'일꾼',inf:'보병',arch:'궁수',cav:'기병',siege:'공성',trade:'교역'};
@@ -79,9 +102,9 @@ const KEYS='QWERTYUIO';
 const GRATE={berry:0.75,farm:0.6,tree:0.55,mine:0.5}, CAP=10, POPMAX=75;
 const RAD={vil:6,inf:6,arch:6,cav:9,siege:11,trade:9};
 const DIFF={
-  easy:{name:'쉬움',gather:0.75,vills:14,firstAt:480,interval:240,wave:4,maxBar:1,barAt:11,train:1.25,feudalAt:13,castleAt:99,maxAge:1,towers:0,stable:false},
-  normal:{name:'보통',gather:1,vills:22,firstAt:330,interval:180,wave:5,maxBar:2,barAt:9,train:1,feudalAt:11,castleAt:18,maxAge:2,towers:1,stable:true},
-  hard:{name:'어려움',gather:1.3,vills:28,firstAt:240,interval:150,wave:6,maxBar:2,barAt:8,train:0.85,feudalAt:10,castleAt:16,maxAge:2,towers:2,stable:true},
+  easy:{name:'쉬움',gather:0.75,vills:14,firstAt:480,interval:240,wave:4,maxBar:1,barAt:11,train:1.25,feudalAt:13,castleAt:99,maxAge:1,towers:0,stable:false,raid:false,flank:false},
+  normal:{name:'보통',gather:1,vills:22,firstAt:330,interval:180,wave:5,maxBar:2,barAt:9,train:1,feudalAt:11,castleAt:18,maxAge:2,towers:1,stable:true,raid:true,raidInt:160,flank:true},
+  hard:{name:'어려움',gather:1.3,vills:28,firstAt:240,interval:150,wave:6,maxBar:2,barAt:8,train:0.85,feudalAt:10,castleAt:16,maxAge:2,towers:2,stable:true,raid:true,raidInt:110,flank:true},
 };
 
 const $=s=>document.querySelector(s);

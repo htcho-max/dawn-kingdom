@@ -1,7 +1,9 @@
 // Bundles src/ into single-file HTML builds.
 //   dist/index.html    — full document (GitHub Pages, local play)
 //   dist/artifact.html — body fragment for publishing as a Claude artifact
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+//   dist/sw.js, manifest.webmanifest, icons/ — install & offline support
+import { readFileSync, writeFileSync, mkdirSync, copyFileSync, readdirSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -36,4 +38,11 @@ const full = html.replace(/<!-- \/?artifact:(head|body) -->\n?/g, '');
 mkdirSync(join(root, 'dist'), { recursive: true });
 writeFileSync(join(root, 'dist', 'index.html'), full);
 writeFileSync(join(root, 'dist', 'artifact.html'), artifact);
-console.log(`built dist/index.html (${(full.length / 1024).toFixed(0)} KB), dist/artifact.html`);
+
+// PWA files: manifest, icons, and a service worker stamped with this build's hash.
+const version = createHash('sha256').update(full).digest('hex').slice(0, 12);
+writeFileSync(join(root, 'dist', 'sw.js'), src('sw.js').replace('__VERSION__', version));
+copyFileSync(join(root, 'src', 'manifest.webmanifest'), join(root, 'dist', 'manifest.webmanifest'));
+mkdirSync(join(root, 'dist', 'icons'), { recursive: true });
+for (const f of readdirSync(join(root, 'src', 'icons'))) copyFileSync(join(root, 'src', 'icons', f), join(root, 'dist', 'icons', f));
+console.log(`built dist/index.html (${(full.length / 1024).toFixed(0)} KB), dist/artifact.html, PWA ${version}`);

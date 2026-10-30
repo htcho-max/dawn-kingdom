@@ -2,7 +2,8 @@
 // ---------- entities ----------
 function spawnUnit(type,owner,x,y){
   const D=UD[type];
-  const hp0=D.hp+(type==='villager'?G.players[owner].m.vilHp:0);
+  let hp0=D.hp+(type==='villager'?G.players[owner].m.vilHp:0);
+  if(D.cls==='cav'&&civIs(owner,'horse'))hp0=Math.round(hp0*1.2);
   const u={kind:'unit',id:G.nid++,type,owner,x,y,hp:hp0,maxHp:hp0,gspd:0,state:'idle',path:[],tgt:null,carry:{t:null,n:0},cd:0,repath:0,stuck:0,acq:Math.random()*0.4,face:Math.PI/2,anim:Math.random()*10,gtype:null,moving:false};
   G.units.push(u);return u;
 }
@@ -47,6 +48,7 @@ function queueItem(b,item){
   const o=b.owner,isT=!!TD[item],P=G.players[o];
   if(b.queue.length>=5){if(o===0)toast('대기열이 가득 찼습니다');return false}
   if(isT){const st=techState(o,item);if(st!=='ok'){if(o===0)toast(st==='req'?TD[item].reqTxt+'이 필요합니다':st==='locked'?AGE_N[TD[item].age]+'가 필요합니다':'지금은 연구할 수 없습니다',true);return false}}
+  else if(!trainOf(b).includes(item))return false;
   else if(UD[item].age>P.age){if(o===0)toast(AGE_N[UD[item].age]+'가 필요합니다',true);return false}
   const c=isT?TD[item].cost:UD[item].cost;
   if(!afford(o,c)){if(o===0)toast(lack(o,c),true);return false}
@@ -76,6 +78,7 @@ function damage(o,dmg,src){
 function kill(o,src){
   o.dead=true;
   if(src&&src.owner!==undefined)G.stats[src.owner].kills++;
+  if(G.scn)scnKill(o,src);
   if(o.owner!==undefined)G.stats[o.owner].lost++;
   const c=center(o);
   if(o.kind==='bld'&&o.garrison&&o.garrison.length)ungarrison(o);
@@ -169,7 +172,7 @@ function updUnit(u,dt){
       if(!A||A.dead){A=u.ta=otherMarket(u.owner,B,u.x,u.y);if(!A){resetU(u);u.state='idle';break}}
       const r=approach(u,B,T,dt);
       if(r===-1){resetU(u);u.state='idle';break}
-      if(r===1){const ca=center(A),cb=center(B),g=tradeGold(ca,cb);
+      if(r===1){const ca=center(A),cb=center(B),g=Math.round(tradeGold(ca,cb)*(civIs(u.owner,'trade')?1.4:1));
         G.players[u.owner].gold+=g;G.stats[u.owner].gathered+=g;
         if(u.owner===0){G.fx.push({x:u.x,y:u.y,z:34,vz:18,txt:'+'+g,c:RCOL.gold,t:1.3});play('coin',u.x,u.y)}
         u.ta=B;u.tb=A;u.path=[];u.stuck=0;u.work=false}
@@ -273,7 +276,7 @@ function updBld(b,dt){
     if(!isT&&popOf(b.owner)>=capOf(b.owner)){b.blocked=true;if(b.owner===0&&!b.warned){b.warned=true;toast('인구 한도에 도달했습니다. 집을 지으세요',true)}}
     else{
       b.blocked=false;b.warned=false;b.qt+=dt;
-      const need=(isT?TD[t].time:UD[t].time)*(b.owner!==0?DIFF[G.aiDiff[b.owner]].train:1);
+      const need=(isT?TD[t].time:UD[t].time)*(b.owner!==0?DIFF[G.aiDiff[b.owner]].train:1)*(!isT&&((b.type==='stable'&&civIs(b.owner,'horse'))||(t==='villager'&&civIs(b.owner,'farm')))?0.75:1);
       if(b.qt>=need){
         b.qt=0;b.queue.shift();
         if(isT)applyTech(b.owner,t);
@@ -340,9 +343,9 @@ function cmdTrade(u,B){
 }
 // ---------- market ----------
 function trade(o,r,buy){
-  const P=G.players[o],pr=P.price[r];
-  if(buy){if(P.gold<pr){if(o===0)toast('금이 부족합니다',true);return false}P.gold-=pr;P[r]+=100;P.price[r]=Math.min(300,pr+6)}
-  else{if(P[r]<100){if(o===0)toast(RNS[r]+' 부족합니다',true);return false}P[r]-=100;P.gold+=Math.round(pr*0.7);P.price[r]=Math.max(25,pr-6)}
+  const P=G.players[o],pr=P.price[r],dp=civIs(o,'trade')?3:6;
+  if(buy){if(P.gold<pr){if(o===0)toast('금이 부족합니다',true);return false}P.gold-=pr;P[r]+=100;P.price[r]=Math.min(300,pr+dp)}
+  else{if(P[r]<100){if(o===0)toast(RNS[r]+' 부족합니다',true);return false}P[r]-=100;P.gold+=Math.round(pr*0.7);P.price[r]=Math.max(25,pr-dp)}
   if(o===0)play('coin');return true;
 }
 function autoTask(u){

@@ -16,7 +16,7 @@ function step(dt){
   if(sel.some(e=>e.dead))sel=sel.filter(e=>!e.dead);
   G.visT-=dt;if(G.visT<=0){G.visT=0.15;computeVis()}
   for(let o=1;o<G.np;o++){if(G.players[o].out)continue;G.aiT[o]-=dt;if(G.aiT[o]<=0){G.aiT[o]=1;aiThink(o)}}
-  G.elimT=(G.elimT||0)-dt;if(G.elimT<=0){G.elimT=0.5;checkElim()}
+  G.elimT=(G.elimT||0)-dt;if(G.elimT<=0){G.elimT=0.5;checkElim();if(G.scn)scnCheck()}
   G.histT=(G.histT===undefined?0:G.histT)-dt;if(G.histT<=0){G.histT=10;recordHist()}
 }
 
@@ -35,6 +35,6 @@ function eliminate(o){
 }
 function checkElim(){
   if(G.over)return;
-  for(let o=0;o<G.np;o++){const P=G.players[o];if(P.out)continue;if(!G.blds.some(b=>b.owner===o&&b.type==='tc'&&!b.dead)){if(o===0){P.out=true;endGame(false);return}eliminate(o)}}
+  for(let o=0;o<G.np;o++){const P=G.players[o];if(P.out)continue;if(o===0&&scnDef()&&scnDef().noTc)continue;if(!G.blds.some(b=>b.owner===o&&b.type==='tc'&&!b.dead)){if(o===0){P.out=true;endGame(false);return}eliminate(o)}}
   if(!G.players.some((P,o)=>!P.out&&foe(0,o)))endGame(true);
 }

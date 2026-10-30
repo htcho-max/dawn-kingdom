@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#161c29">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="새벽의 왕국">
 <!-- artifact:head -->
 <title>새벽의 왕국</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -65,9 +72,16 @@
 <script src="js/10-sound.js"></script>
 <script src="js/11-save.js"></script>
 <script src="js/12-ui.js"></script>
-<script src="js/13-screens.js"></script>
-<script src="js/14-main.js"></script>
+<script src="js/13-campaign.js"></script>
+<script src="js/14-screens.js"></script>
+<script src="js/15-main.js"></script>
 <!-- /build:js -->
 <!-- /artifact:body -->
+<script>
+// Offline / install support (only when served over http(s), not from a file).
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+</script>
 </body>
 </html>

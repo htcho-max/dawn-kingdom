@@ -15,9 +15,9 @@ function commandsFor(){
   const P=G.players[0];
   if(own[0].kind==='bld'){
     const b=own[0];if(b.built<1)return[];const cmds=[];
-    for(const t of BD[b.type].train||[]){const lock=UD[t].age>P.age;
+    for(const t of trainOf(b)){const lock=UD[t].age>P.age;
       cmds.push({label:UD[t].name,cost:UD[t].cost,lock:lock?AGE_N[UD[t].age]:null,tip:UD[t].desc,run:()=>queueItem(b,t),ok:()=>!lock&&afford(0,UD[t].cost)&&b.queue.length<5})}
-    {const tr=(BD[b.type].train||[]).filter(t=>UD[t].age<=P.age);
+    {const tr=trainOf(b).filter(t=>UD[t].age<=P.age);
       if(tr.length)cmds.push({label:b.repeat?'반복: '+UD[b.repeat].name:'반복 생산',cost:{},on:!!b.repeat,tip:'대기열이 비면 같은 유닛을 자원이 허락하는 한 계속 만듭니다. 누를 때마다 다음 유닛으로 바뀌고, 마지막에 꺼집니다.',run:()=>{const i=b.repeat?tr.indexOf(b.repeat):-1;b.repeat=i+1<tr.length?tr[i+1]:null;renderPanel(true)},ok:()=>true})}
     for(const id in TD){const D=TD[id];if(D.at!==b.type)continue;const st=techState(0,id);if(st==='done'||st==='hidden')continue;
       cmds.push({label:D.name,cost:D.cost,tech:true,lock:st==='locked'?AGE_N[D.age]:st==='req'?'조건 부족':st==='queued'?'연구 중':null,
@@ -76,13 +76,14 @@ function renderPanel(force){
   curCmds.forEach((c,i)=>{curBtns[i].disabled=!c.ok()});
   const info=$('#info-main');
   renderQueue(sel.length===1?e0:null);
+  if(!sel.length&&scnDef()){const m=scnDef();info.innerHTML=tt(`<h3>임무 ${SCN_BY[m.id]+1} · ${m.name}</h3><div class="sub">${m.brief}</div>${civOf(0)?`<div class="sub civline"><b>${civOf(0).name}</b> · ${civDesc(G.players[0].civ)}</div>`:''}`);return}
   if(!sel.length){info.innerHTML=tt(`<h3>새벽의 왕국</h3><div class="sub">일꾼을 선택하고 나무·열매·금광을 우클릭해 자원을 모으세요. 드래그로 여러 유닛을 고르고, 적을 우클릭하면 공격합니다.</div><div class="stats"><span>지형 <b>${(MTYPES[G.mtype]||MTYPES.grass).name}</b></span><span>시대 <b>${AGE_N[P.age]}</b></span><span>목표 <b>${G.team.some((t,o)=>o&&ally(0,o))?'상대 팀':'다른 부족'} 마을회관 모두 파괴</b></span></div><div class="roster">${G.players.map((q,o)=>`<span class="chip${q.out?' out':''}"><i class="dot" style="background:${OWN[o].c}"></i>${nameOf(o)}${teamTag(o)?' · '+teamTag(o):''}${o?' · '+DIFF[G.aiDiff[o]].name:''} · ${q.out?'멸망':AGE_N[q.age].replace(' 시대','')}</span>`).join('')}</div>`);return}
   const e=e0;
   if(sel.length>1){
     const g={};for(const u of sel)g[u.type]=(g[u.type]||0)+1;
     info.innerHTML=tt(`<h3>${sel.length}개 ${sel[0].kind==='unit'?'유닛':'건물'}</h3><div class="groups">${Object.keys(g).map(k=>`<span class="chip">${(UD[k]||BD[k]).name} × ${g[k]}</span>`).join('')}</div><div class="sub">우클릭으로 이동, 적을 우클릭하면 공격, A를 누르고 클릭하면 공격 이동합니다.</div>`);return;
   }
-  const own=e.owner===0||e.owner===undefined?'':` <span class="sub"><i class="dot" style="background:${OWN[e.owner].c}"></i>${nameOf(e.owner)}${ally(0,e.owner)?' · 동맹':teamTag(e.owner)?' · '+teamTag(e.owner):''}</span>`;
+  const own=e.owner===0||e.owner===undefined?'':` <span class="sub"><i class="dot" style="background:${OWN[e.owner].c}"></i>${nameOf(e.owner)}${civOf(e.owner)?' · '+civOf(e.owner).name:''}${ally(0,e.owner)?' · 동맹':teamTag(e.owner)?' · '+teamTag(e.owner):''}</span>`;
   if(e.kind==='res'){info.innerHTML=tt(`<h3>${SUBN[e.sub]}</h3><div class="stats"><span>${RN[e.rt]} <b>${Math.ceil(e.amount)}</b> 남음</span></div><div class="sub">일꾼을 선택한 뒤 우클릭하면 채집합니다.</div>`);return}
   if(e.kind==='unit'){
     const D=UD[e.type],a=armOf(e);const st={idle:'대기 중',move:'이동 중',amove:'공격 이동 중',attack:'전투 중',gather:'채집 중: '+(RN[e.gtype]||''),return:'자원 운반 중',build:'건설 중',enter:'주둔하러 가는 중',trade:'교역 중'}[e.state];
@@ -94,6 +95,7 @@ function renderPanel(force){
   let extra='';
   if(e.built<1)extra=`<div class="sub">건설 ${Math.floor(e.built*100)}% · 일꾼으로 우클릭하면 함께 짓습니다.</div>`;
   else if(e.type==='farm')extra=`<div class="stats"><span>식량 <b>${Math.ceil(e.food)}</b> 남음</span></div>`;
+  if(e.type==='tc'&&civOf(e.owner))extra+=`<div class="sub civline"><b>${civOf(e.owner).name}</b> · ${civDesc(G.players[e.owner].civ)}</div>`;
   if(D.gar&&e.built>=1)extra+=`<div class="stats"><span>주둔 <b>${e.garrison.length}/${D.gar}</b></span><span>화살 <b>${1+e.garrison.length}발</b></span></div>`;
   if(D.atk&&!(D.gar&&e.built>=1))extra+=`<div class="stats"><span>공격 <b>${D.atk.dmg+G.players[e.owner].m.patk}</b></span><span>사거리 <b>${D.atk.range+G.players[e.owner].m.prng}</b></span></div>`;
   info.innerHTML=tt(`<h3>${D.name}${own}</h3><div class="hpbar"><b style="width:${e.hp/e.maxHp*100}%"></b></div><div class="stats"><span>체력 <b>${Math.ceil(e.hp)}/${e.maxHp}</b></span></div>${extra}<div class="sub">${D.desc}${e.owner===0&&D.train&&e.built>=1?' 우클릭으로 집결지를 정합니다.':''}${e.owner===0&&e.queue&&e.queue.length?' 대기열을 클릭하면 취소됩니다.':''}</div>`);
@@ -130,6 +132,7 @@ let guideHidden=null,guideSig='';
 function renderGuide(){
   const el=$('#guide');if(!G||!started||G.over){el.hidden=true;return}
   if(guideHidden===null){try{const v=localStorage.getItem('dawn.guideHidden');guideHidden=v===null?W<720:v==='1'}catch(e){guideHidden=W<720}}
+  if(G.scn){el.hidden=false;el.style.top=(topH+10)+'px';renderScnGuide(el);return}
   G.guide=G.guide||0;
   while(G.guide<GUIDE.length-1&&GUIDE[G.guide].done()){toast('목표 달성: '+GUIDE[G.guide].t);play('research');G.guide++}
   el.hidden=false;el.style.top=(topH+10)+'px';
